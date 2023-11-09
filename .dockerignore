@@ -1,6 +1,10 @@
+Dockerfile
+**/Dockerfile
 node_modules
 dist
 build
+**/.env
+.git
 
 **/node_modules
 **/build
