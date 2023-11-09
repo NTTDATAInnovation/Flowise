@@ -21,16 +21,6 @@ const WatsonDiscoveryPassageModel = z.object({
     passage_text: z.string()
 })
 
-// "metadata": {
-//   "parent_document_id": "web_crawl_06e0b37d-2be1-5324-9c9b-c97febb9613a",
-//   "source": {
-//     "content-type": "text/html; charset=utf-8",
-//     "source_id": "31e181df1d3765714d9a279912ee7210194c25cb38a87e4fe9c37a487c3a48c1",
-//     "url": "https://www.droneregler.dk/generelt-om-regler-for-droneflyvning"
-//   },
-//   "ingest_datetime": "2023-11-09T06:29:37.352Z",
-//   "application_id": "web_crawl"
-// },
 const WatsonDiscoveryMetadataModel = z.object({
     source: z.object({
         url: z.string()
@@ -41,7 +31,6 @@ const WatsonDiscoveryResultModel = z.object({
     result_metadata: z.object({ confidence: z.number() }),
     document_passages: z.array(WatsonDiscoveryPassageModel),
     metadata: WatsonDiscoveryMetadataModel
-    // text: z.string()
 })
 
 const WatsonDiscoveryResponseModel = z.object({
@@ -75,7 +64,6 @@ export class WatsonDiscoveryTool extends Tool {
             // return: ['results.document_passsages.passage_text']
         }
 
-        // request option
         const options = {
             method: 'POST',
             headers: {
@@ -85,21 +73,20 @@ export class WatsonDiscoveryTool extends Tool {
             body: JSON.stringify(body)
         }
 
-        try {
-            const now = Date.now()
-            const response = await fetch(uri, options)
-            const json = await response.json()
-            console.log(`Took ${Date.now() - now}ms to get response`)
-            const parsed = WatsonDiscoveryResponseModel.parse(json)
-            const output = formatResponse(parsed)
-            console.log(output)
-            const fs = require('fs')
-            await fs.promises.writeFile('output.json', JSON.stringify(json, null, 2))
-            return output
-        } catch (error) {
-            console.log(error)
-            return error
+        const now = Date.now()
+        const response = await fetch(uri, options)
+
+        const json = await response.json()
+        if (response.status !== 200) {
+            console.log(`Got error response: ${response.status}`)
+            throw new Error(`The tool failed with the following exception: ${JSON.stringify(json, null, 2)}`)
         }
+        console.log(`Took ${Date.now() - now}ms to get response`)
+        const parsed = WatsonDiscoveryResponseModel.parse(json)
+        const output = formatResponse(parsed)
+        const fs = require('fs')
+        await fs.promises.writeFile('output.json', JSON.stringify(json, null, 2))
+        return output
     }
 }
 
