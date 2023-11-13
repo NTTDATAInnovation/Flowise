@@ -29,7 +29,7 @@ class WatsonDiscovery_Tools implements INode {
                 name: 'url',
                 type: 'string',
                 description:
-                    'The URL to the Watson discovery instance: https://api.{region}.discovery.watson.cloud.ibm.com/instances/{region}',
+                    'The URL to the Watson discovery instance: https://api.{region}.discovery.watson.cloud.ibm.com/instances/{instance_id}',
                 additionalParams: false,
                 optional: false
             },
