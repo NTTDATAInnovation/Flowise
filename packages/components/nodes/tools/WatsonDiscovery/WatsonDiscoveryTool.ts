@@ -47,6 +47,7 @@ export class WatsonDiscoveryTool extends Tool {
     constructor(args: WatsonDiscoverySettings) {
         super()
         this.settings = args
+        this.description = args.description
     }
 
     _makeBaseUrl() {
