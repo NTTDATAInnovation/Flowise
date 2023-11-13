@@ -11,8 +11,9 @@ export interface Headers {
 export const WatsonDiscoverySettings = z.object({
     url: z.string(),
     projectId: z.string(),
-    resultCount: z.number(),
-    apiKey: z.string()
+    resultCount: z.union([z.number(), z.string().pipe(z.coerce.number())]),
+    apiKey: z.string(),
+    description: z.string()
 })
 
 export type WatsonDiscoverySettings = z.infer<typeof WatsonDiscoverySettings>
