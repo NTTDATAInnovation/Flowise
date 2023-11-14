@@ -11,7 +11,6 @@ export interface Headers {
 const StringNumber = (fn: (val: z.ZodNumber) => z.ZodNumber = (n) => n) => z.union([fn(z.number()), z.string().pipe(z.coerce.number())])
 
 const WatsonDiscoveryPassagesModel = z.object({
-    passagesCount: StringNumber((n) => n.max(400)).optional(),
     passagesCharacters: StringNumber((n) => n.min(50).max(2000)).optional(),
     passagesMaxPerDocument: StringNumber().optional()
 })
@@ -78,11 +77,10 @@ export class WatsonDiscoveryTool extends Tool {
     }
 
     _buildBody(searchQuery: string) {
-        const { passagesCount, passagesCharacters, passagesMaxPerDocument } = this.settings
+        const { passagesCharacters, passagesMaxPerDocument } = this.settings
         const passages: Record<string, any> = {}
-        if (passagesCount || passagesCharacters || passagesMaxPerDocument) {
+        if (passagesCharacters || passagesMaxPerDocument) {
             passages.enabled = true
-            passages.count = passagesCount || undefined
             passages.characters = passagesCharacters || undefined
             passages.per_document = Boolean(passagesMaxPerDocument)
             passages.max_per_document = passagesMaxPerDocument || undefined

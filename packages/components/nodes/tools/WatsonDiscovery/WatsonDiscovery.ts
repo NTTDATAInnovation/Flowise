@@ -80,16 +80,18 @@ class WatsonDiscovery_Tools implements INode {
                 additionalParams: true,
                 optional: true
             },
-            {
-                label: 'Passages count',
-                name: 'passagesCount',
-                type: 'number',
-                description:
-                    'The maximum number of passages to return (passages.count, max: 400). Has no effect if `Passages per document` is set',
-                placeholder: '1 <= count <= 400',
-                additionalParams: true,
-                optional: true
-            },
+            // NOTE: This turned out not to be useful for our purposes (since it only works with per_document = false, which we never have)
+            // but I'm leaving it here in case we want to add it back in the future
+            // {
+            //     label: 'Passages count',
+            //     name: 'passagesCount',
+            //     type: 'number',
+            //     description:
+            //         'The maximum number of passages to return (passages.count, max: 400). Has no effect if `Passages per document` is set',
+            //     placeholder: '1 <= count <= 400',
+            //     additionalParams: true,
+            //     optional: true
+            // },
             {
                 label: 'Passages characters',
                 name: 'passagesCharacters',
