@@ -1,6 +1,6 @@
 import { ICommonObject, INode, INodeData, INodeParams } from '../../../src/Interface'
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
-import { WatsonDiscoverySettings, WatsonDiscoveryTool, desc } from './WatsonDiscoveryTool'
+import { WatsonDiscoverySettingsModel, WatsonDiscoveryTool, desc } from './WatsonDiscoveryTool'
 
 class WatsonDiscovery_Tools implements INode {
     label: string
@@ -43,6 +43,16 @@ class WatsonDiscovery_Tools implements INode {
                 optional: false
             },
             {
+                label: 'Collection IDs',
+                name: 'collectionIds',
+                list: false,
+                type: 'string',
+                description: 'The IDs of the collections to query against (comma separated)',
+                optional: true,
+                additionalParams: false,
+                placeholder: 'collection1,collection2,...'
+            },
+            {
                 name: 'resultCount',
                 type: 'number',
                 label: 'Result count',
@@ -59,6 +69,44 @@ class WatsonDiscovery_Tools implements INode {
                 default: desc,
                 description: 'Acts like a prompt to tell agent when it should use this tool',
                 additionalParams: false,
+                optional: true
+            },
+            {
+                label: 'API version',
+                name: 'apiVersion',
+                type: 'string',
+                default: '2023-03-31',
+                description: 'The version of the API to use (default: 2023-03-31)',
+                additionalParams: true,
+                optional: true
+            },
+            {
+                label: 'Passages count',
+                name: 'passagesCount',
+                type: 'number',
+                description:
+                    'The maximum number of passages to return (passages.count, max: 400). Has no effect if `Passages per document` is set',
+                placeholder: '1 <= count <= 400',
+                additionalParams: true,
+                optional: true
+            },
+            {
+                label: 'Passages characters',
+                name: 'passagesCharacters',
+                type: 'number',
+                description:
+                    'The approximate number of characters that any one passage will have. (passages.characters, min: 50, max: 2000)',
+                placeholder: '50 <= characters <= 2000',
+                additionalParams: true,
+                optional: true
+            },
+            {
+                label: 'Passages max per document',
+                name: 'passagesMaxPerDocument',
+                type: 'number',
+                description: 'The maximum number of passages to return per document (passages.max_per_document)',
+                placeholder: '',
+                additionalParams: true,
                 optional: true
             }
         ]
@@ -78,13 +126,11 @@ class WatsonDiscovery_Tools implements INode {
             apiKey: iamApiKey
         }
 
-        const settings = WatsonDiscoverySettings.safeParse(fullSettings)
+        const settings = WatsonDiscoverySettingsModel.safeParse(fullSettings)
 
         if (!settings.success) {
             throw new Error(`Failed to parse settings: ${settings.error.message}`)
         }
-
-        console.log(`Settings`, settings)
 
         return new WatsonDiscoveryTool(settings.data)
     }

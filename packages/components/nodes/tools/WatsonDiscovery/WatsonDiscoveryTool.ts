@@ -8,17 +8,38 @@ export interface Headers {
     [key: string]: string
 }
 
-export const WatsonDiscoverySettings = z.object({
-    url: z.string(),
-    projectId: z.string(),
-    resultCount: z.union([z.number(), z.string().pipe(z.coerce.number())]),
-    apiKey: z.string(),
-    description: z.string()
+const StringNumber = (fn: (val: z.ZodNumber) => z.ZodNumber = (n) => n) => z.union([fn(z.number()), z.string().pipe(z.coerce.number())])
+
+const WatsonDiscoveryPassagesModel = z.object({
+    passagesCount: StringNumber((n) => n.max(400)).optional(),
+    passagesCharacters: StringNumber((n) => n.min(50).max(2000)).optional(),
+    passagesMaxPerDocument: StringNumber().optional()
 })
 
-export type WatsonDiscoverySettings = z.infer<typeof WatsonDiscoverySettings>
+export const WatsonDiscoverySettingsModel = z
+    .object({
+        url: z.string(),
+        projectId: z.string(),
+        resultCount: StringNumber(),
+        apiKey: z.string(),
+        collectionIds: z
+            .string()
+            .transform((s) =>
+                s
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+            )
+            .optional()
+            .default(''),
+        apiVersion: z.string(),
+        description: z.string()
+    })
+    .merge(WatsonDiscoveryPassagesModel)
 
-const WatsonDiscoveryPassageModel = z.object({
+export type WatsonDiscoverySettings = z.infer<typeof WatsonDiscoverySettingsModel>
+
+const WatsonDiscoveryDocumentPassagesModel = z.object({
     passage_text: z.string()
 })
 
@@ -30,7 +51,7 @@ const WatsonDiscoveryMetadataModel = z.object({
 
 const WatsonDiscoveryResultModel = z.object({
     result_metadata: z.object({ confidence: z.number() }),
-    document_passages: z.array(WatsonDiscoveryPassageModel),
+    document_passages: z.array(WatsonDiscoveryDocumentPassagesModel),
     metadata: WatsonDiscoveryMetadataModel
 })
 
@@ -52,7 +73,35 @@ export class WatsonDiscoveryTool extends Tool {
     }
 
     _makeBaseUrl() {
-        return `${this.settings.url}/v2/projects/${this.settings.projectId}/query?version=2021-08-30`
+        const { url, projectId, apiVersion } = this.settings
+        return `${url}/v2/projects/${projectId}/query?version=${apiVersion}`
+    }
+
+    _buildBody(searchQuery: string) {
+        const { passagesCount, passagesCharacters, passagesMaxPerDocument } = this.settings
+        const passages: Record<string, any> = {}
+        if (passagesCount || passagesCharacters || passagesMaxPerDocument) {
+            passages.enabled = true
+            passages.count = passagesCount || undefined
+            passages.characters = passagesCharacters || undefined
+            passages.per_document = Boolean(passagesMaxPerDocument)
+            passages.max_per_document = passagesMaxPerDocument || undefined
+        }
+
+        for (const key in passages) {
+            if (passages[key] === undefined || passages[key] === false) {
+                delete passages[key]
+            }
+        }
+
+        const body = {
+            count: this.settings.resultCount,
+            natural_language_query: searchQuery,
+            collection_ids: this.settings.collectionIds,
+            // return: ['results.document_passsages.passage_text']
+            passages: passages
+        }
+        return body
     }
 
     /** @ignore */
@@ -60,11 +109,9 @@ export class WatsonDiscoveryTool extends Tool {
         const uri = this._makeBaseUrl()
         const token = `Basic ${Buffer.from(`apikey:${this.settings.apiKey}`).toString('base64')}`
 
-        const body = {
-            count: this.settings.resultCount,
-            natural_language_query: input
-            // return: ['results.document_passsages.passage_text']
-        }
+        const body = this._buildBody(input)
+
+        console.log(body)
 
         const options = {
             method: 'POST',
@@ -79,15 +126,24 @@ export class WatsonDiscoveryTool extends Tool {
         const response = await fetch(uri, options)
 
         const json = await response.json()
+        // console.log(json)
         if (response.status !== 200) {
             console.log(`Got error response: ${response.status}`)
+            console.log(json)
             throw new Error(`The tool failed with the following exception: ${JSON.stringify(json, null, 2)}`)
         }
         console.log(`Took ${Date.now() - now}ms to get response`)
-        const parsed = WatsonDiscoveryResponseModel.parse(json)
-        const output = formatResponse(parsed)
-        const fs = require('fs')
-        await fs.promises.writeFile('output.json', JSON.stringify(json, null, 2))
+        const parsed = WatsonDiscoveryResponseModel.safeParse(json)
+        if (!parsed.success) {
+            console.log(JSON.stringify(parsed.error.format().results, null, 2))
+            throw new Error(`Failed to parse response from Watson Discovery. See logs for more info.`)
+        }
+        console.log(`Result count: `, parsed.data.results.length)
+        console.log(
+            `Passages & lengths`,
+            parsed.data.results.map((r) => r.document_passages.map((p) => p.passage_text.length))
+        )
+        const output = formatResponse(parsed.data)
         return output
     }
 }
